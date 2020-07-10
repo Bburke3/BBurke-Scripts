@@ -23,10 +23,14 @@ public class WoodCutter extends PollingScript<ClientContext> {
     @Override
     public void start() {
         System.out.println("Starting");
+        ctx.camera.pitch(true);
     }
 
     @Override
     public void poll() {
+        if (ctx.movement.energyLevel() == 100 && !ctx.movement.running())
+            ctx.movement.running(true);
+
         if (activate()) {
             chop();
         } else {
@@ -46,10 +50,10 @@ public class WoodCutter extends PollingScript<ClientContext> {
         final GameObject tree = ctx.objects.select().name(treeType).nearest().poll();
 
         if (!ctx.players.local().inMotion() && ctx.players.local().animation() == -1) {
-            // Puts tree in centre of screen.
-            if (!tree.inViewport()) {
-                ctx.camera.turnTo(tree);
-            }
+//            // Puts tree in centre of screen.
+//            if (!tree.inViewport()) {
+//                ctx.camera.turnTo(tree);
+//            }
 
             tree.interact("Chop down");
 
@@ -64,7 +68,7 @@ public class WoodCutter extends PollingScript<ClientContext> {
     }
 
     public boolean activate() {
-        return ctx.inventory.select().count() < 28;
+        return !ctx.inventory.isFull();
     }
 
     public void drop() {
@@ -77,11 +81,14 @@ public class WoodCutter extends PollingScript<ClientContext> {
     }
 
     public void bankLogs() {
-        ctx.camera.turnTo(ctx.bank.nearest());
+        GameObject banker = ctx.objects.select().id(2897).nearest().poll();
 
-        if (ctx.bank.open()) {
-            ctx.bank.depositInventory();
-            ctx.bank.close();
-        }
+        ctx.camera.turnTo(banker);
+
+        ctx.movement.step(banker);
+
+        banker.interact("Bank");
+        ctx.bank.depositInventory();
+        ctx.bank.close();
     }
 }

@@ -1,22 +1,22 @@
 package Goblin;
 
-import org.powerbot.script.Condition;
-import org.powerbot.script.Filter;
-import org.powerbot.script.PollingScript;
-import org.powerbot.script.Script;
+import org.powerbot.script.*;
 import org.powerbot.script.rt4.*;
-
+import org.powerbot.script.rt4.ClientContext;
+import java.awt.*;
 import java.util.concurrent.Callable;
 
 @Script.Manifest(name = "Killer", description = "I Kill Things", properties = "author = Bradley; topic = 999; client = 4;")
 
-public class GoblinKiller extends PollingScript<ClientContext> {
+public class GoblinKiller extends PollingScript<ClientContext> implements PaintListener {
 
-    final static String ENEMY_NAME = "Chicken";
+    final static String ENEMY_NAME = "Goblin";
 
-    final static String FOOD_NAME = "Bread";
+    final static String FOOD_NAME = "Shrimps";
 
     final static String ITEM = "Feather";
+
+    int startExp = 0;
 
     @Override
     public void start() {
@@ -25,6 +25,10 @@ public class GoblinKiller extends PollingScript<ClientContext> {
         if (!hasFood()) {
             System.out.println("No Food");
         }
+
+        startExp = ctx.skills.experience(Constants.SKILLS_MAGIC);
+
+        ctx.camera.pitch(true);
     }
 
     //Constant loop
@@ -40,8 +44,9 @@ public class GoblinKiller extends PollingScript<ClientContext> {
             attack();
         }
         else {
-            pickUp();
+            //pickUp();
         }
+        changeStyle();
     }
 
     @Override
@@ -62,11 +67,11 @@ public class GoblinKiller extends PollingScript<ClientContext> {
     }
 
     public void attack() {
-        final Npc enemy = ctx.npcs.select().name(ENEMY_NAME).select(new Filter<Npc>(){
+        final Npc enemy = ctx.npcs.select().name(ENEMY_NAME).within(25).select(new Filter<Npc>(){
 
             @Override
             public boolean accept(Npc npc) {
-                return !npc.healthBarVisible();
+                return !npc.healthBarVisible() && npc.valid() && ctx.movement.reachable(ctx.players.local(), npc);
             }
         }).nearest().poll();
 
@@ -80,7 +85,7 @@ public class GoblinKiller extends PollingScript<ClientContext> {
             public Boolean call() throws Exception {
                 return ctx.players.local().healthBarVisible() && ctx.players.local().animation() == -1;
             }
-        }, 800,4);
+        }, 800,8);
     }
 
     public void heal() {
@@ -108,8 +113,44 @@ public class GoblinKiller extends PollingScript<ClientContext> {
         Condition.wait(new Callable<Boolean>() {
             @Override
             public Boolean call() throws Exception {
-                return null;
+                return !ctx.players.local().inMotion();
             }
         }, 400, 10);
+    }
+
+    public void changeStyle() {
+//        if (ctx.skills.level(Constants.SKILLS_ATTACK) == 30 && ctx.combat.style(Combat.Style.ACCURATE)) {
+//            ctx.combat.style(Combat.Style.DEFENSIVE);
+//        }
+//
+//        if (ctx.skills.level(Constants.SKILLS_DEFENSE) == 30 && ctx.combat.style(Combat.Style.DEFENSIVE)) {
+//            ctx.combat.style(Combat.Style.AGGRESSIVE);
+//        }
+
+        int adamant[] = {1161, 1123, 1199, 1073};
+
+        for (final Item i : ctx.inventory.id(adamant)) {
+            i.interact("Wear");
+        }
+    }
+
+    @Override
+    public void repaint(Graphics graphics) {
+        long time = this.getTotalRuntime();
+        long seconds = (time / 1000) % 60;
+        long minutes = (time / (1000 * 60) % 60);
+        long hours = (time / (1000 * 60 * 60)) % 24;
+
+        int expGained = ctx.skills.experience(Constants.SKILLS_MAGIC) - startExp;
+
+        Graphics2D g = (Graphics2D) graphics;
+
+        g.setColor(Color.white);
+
+        g.drawString("Killer Bot 3000", 20, 40);
+
+        g.drawString("Running: " + String.format("%02d:%02d:%02d", hours, minutes, seconds), 20, 60);
+
+        g.drawString("EXP/hour: " + (int) (expGained * (3600000D / time)), 20, 80);
     }
 }
